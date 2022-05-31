@@ -23,10 +23,12 @@
 
 NS_ASSUME_NONNULL_BEGIN
 
+typedef void (^CHIPDeviceConnectionBridgeCallback)(chip::DeviceProxy * _Nullable device, NSError * _Nullable error);
+
 class CHIPDeviceConnectionBridge : public chip::ReferenceCounted<CHIPDeviceConnectionBridge>
 {
 public:
-    CHIPDeviceConnectionBridge(CHIPDeviceConnectionCallback completionHandler, dispatch_queue_t queue) :
+    CHIPDeviceConnectionBridge(CHIPDeviceConnectionBridgeCallback completionHandler, dispatch_queue_t queue) :
         mCompletionHandler(completionHandler), mQueue(queue), mOnConnected(OnConnected, this),
         mOnConnectFailed(OnConnectionFailure, this)
     {}
@@ -43,7 +45,7 @@ public:
     }
 
 private:
-    CHIPDeviceConnectionCallback mCompletionHandler;
+    CHIPDeviceConnectionBridgeCallback mCompletionHandler;
     dispatch_queue_t mQueue;
     chip::Callback::Callback<chip::OnDeviceConnected> mOnConnected;
     chip::Callback::Callback<chip::OnDeviceConnectionFailure> mOnConnectFailed;

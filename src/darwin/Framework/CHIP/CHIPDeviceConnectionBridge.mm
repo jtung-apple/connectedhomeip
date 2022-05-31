@@ -22,9 +22,8 @@
 void CHIPDeviceConnectionBridge::OnConnected(void * context, chip::OperationalDeviceProxy * device)
 {
     auto * object = static_cast<CHIPDeviceConnectionBridge *>(context);
-    CHIPDevice * chipDevice = [[CHIPDevice alloc] initWithDevice:device];
     dispatch_async(object->mQueue, ^{
-        object->mCompletionHandler(chipDevice, nil);
+        object->mCompletionHandler(device, nil);
         object->Release();
     });
 }

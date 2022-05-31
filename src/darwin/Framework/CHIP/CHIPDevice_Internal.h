@@ -29,8 +29,9 @@ NS_ASSUME_NONNULL_BEGIN
 
 @interface CHIPDevice ()
 
-- (instancetype)initWithDevice:(chip::DeviceProxy *)device;
+- (instancetype)initWithDevice:(chip::DeviceProxy *)device queue:(dispatch_queue_t)queue completionHandler:(dispatch_block_t)completionHandler;
 - (chip::DeviceProxy *)internalDevice;
+- (void)setInternalDevice:(chip::DeviceProxy *)internalDevice;
 
 @end
 

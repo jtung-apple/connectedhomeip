@@ -76,6 +76,9 @@ static NSString * const kErrorSetupCodeGen = @"Generating Manual Pairing Code fa
 @property (readonly) chip::Optional<chip::CHIPP256KeypairNativeBridge> operationalKeypairNativeBridge;
 @property (readonly) CHIPDeviceAttestationDelegateBridge * deviceAttestationDelegateBridge;
 @property (readonly) MatterControllerFactory * factory;
+
+// persistent device representation to maintain single-read queue
+@property (nonatomic) NSMutableDictionary<NSNumber *, CHIPDevice *> *deviceIDToDeviceMap;
 @end
 
 @implementation CHIPDeviceController
@@ -95,6 +98,8 @@ static NSString * const kErrorSetupCodeGen = @"Generating Manual Pairing Code fa
         if ([self checkForInitError:(_operationalCredentialsDelegate != nullptr) logMsg:kErrorOperationalCredentialsInit]) {
             return nil;
         }
+
+        _deviceIDToDeviceMap = [NSMutableDictionary dictionary];
     }
     return self;
 }
@@ -481,6 +486,22 @@ static NSString * const kErrorSetupCodeGen = @"Generating Manual Pairing Code fa
     return success;
 }
 
+- (CHIPDevice *)_chipDeviceWithDeviceID:(uint64_t)deviceID proxy:(chip::DeviceProxy *)deviceProxy {
+    NSNumber *deviceIDNumber = @(deviceID);
+    CHIPDevice * chipDevice = self->_deviceIDToDeviceMap[deviceIDNumber];
+    if (chipDevice) {
+        [chipDevice setInternalDevice:deviceProxy];
+    } else {
+        chipDevice = [[CHIPDevice alloc] initWithDevice:deviceProxy queue:self->_chipWorkQueue completionHandler:^{
+            // when the device is done, remove from map
+            self->_deviceIDToDeviceMap[deviceIDNumber] = nil;
+        }];
+        self->_deviceIDToDeviceMap[deviceIDNumber] = chipDevice;
+    }
+
+    return chipDevice;
+}
+
 - (CHIPDevice *)getDeviceBeingCommissioned:(uint64_t)deviceId error:(NSError * __autoreleasing *)error
 {
     CHIP_ERROR errorCode = CHIP_ERROR_INCORRECT_STATE;
@@ -497,7 +518,7 @@ static NSString * const kErrorSetupCodeGen = @"Generating Manual Pairing Code fa
         }
         return nil;
     }
-    return [[CHIPDevice alloc] initWithDevice:deviceProxy];
+    return [self _chipDeviceWithDeviceID:deviceId proxy:deviceProxy];
 }
 
 - (BOOL)getConnectedDevice:(uint64_t)deviceID
@@ -516,7 +537,14 @@ static NSString * const kErrorSetupCodeGen = @"Generating Manual Pairing Code fa
 
     dispatch_async(_chipWorkQueue, ^{
         if ([self isRunning]) {
-            CHIPDeviceConnectionBridge * connectionBridge = new CHIPDeviceConnectionBridge(completionHandler, queue);
+            CHIPDeviceConnectionBridge * connectionBridge = new CHIPDeviceConnectionBridge(^(chip::DeviceProxy * _Nullable device, NSError * _Nullable error) {
+                if (error) {
+                    completionHandler(nil, error);
+                } else {
+                    CHIPDevice * chipDevice = [self _chipDeviceWithDeviceID:deviceID proxy:device];
+                    completionHandler(chipDevice, nil);
+                }
+            }, queue);
             errorCode = connectionBridge->connect(self->_cppCommissioner, deviceID);
         }
 

@@ -15,6 +15,7 @@
  *    limitations under the License.
  */
 
+#import <os/lock_private.h>
 #import "CHIPAttributeCacheContainer_Internal.h"
 #import "CHIPAttributeTLVValueDecoder_Internal.h"
 #import "CHIPCallbackBridgeBase_internal.h"
@@ -70,6 +71,8 @@ class NSObjectDataValueCallbackBridge;
 @property (nonatomic, readonly, strong, nonnull) NSRecursiveLock * lock;
 @property (readonly) chip::DeviceProxy * cppDevice;
 @property (nonatomic, readwrite) NSMutableDictionary * reportHandlerBridges;
+@property (nonatomic, strong) dispatch_queue_t completionHandlerQueue;
+@property (nonatomic, strong) dispatch_block_t completionHandler;
 
 @end
 
@@ -231,10 +234,12 @@ static void CauseReadClientFailure(uint64_t deviceId, dispatch_queue_t queue, vo
     return self;
 }
 
-- (instancetype)initWithDevice:(chip::DeviceProxy *)device
+- (instancetype)initWithDevice:(chip::DeviceProxy *)device queue:(dispatch_queue_t)queue completionHandler:(dispatch_block_t)completionHandler
 {
     if (self = [super init]) {
         _cppDevice = device;
+        _completionHandlerQueue = queue;
+        _completionHandler = completionHandler;
     }
     return self;
 }
@@ -242,6 +247,13 @@ static void CauseReadClientFailure(uint64_t deviceId, dispatch_queue_t queue, vo
 - (chip::DeviceProxy *)internalDevice
 {
     return _cppDevice;
+}
+
+- (void)setInternalDevice:(chip::DeviceProxy *)internalDevice {
+    if (_cppDevice != internalDevice) {
+        // TODO: do we need to delete existing _cppDevice if exists?
+        _cppDevice = internalDevice;
+    }
 }
 
 typedef void (^ReportCallback)(NSArray * _Nullable value, NSError * _Nullable error);
@@ -1567,3 +1579,60 @@ void SubscriptionCallback::ReportError(NSError * _Nullable err)
     mHaveQueuedDeletion = true;
 }
 } // anonymous namespace
+
+@interface MTRInteractionItem()
+@property (strong,nonatomic) MTRInteractionQueue *queue;
+// Called by the queue
+- (void)performInteraction;
+- (void)cancel;
+@end
+
+@interface MTRInteractionQueue() {
+    dispatch_queue_t                        _queue;
+    NSMutableArray<MTRInteractionItem *>    *_items;
+    os_unfair_lock                          _lock;
+}
+@end;
+
+@implementation MTRInteractionQueue
+- (instancetype)init {
+    if (self = [super init]) {
+        dispatch_queue_attr_t queueAttr = dispatch_queue_attr_make_with_autorelease_frequency(DISPATCH_QUEUE_SERIAL, DISPATCH_AUTORELEASE_FREQUENCY_WORK_ITEM);
+        _queue = dispatch_queue_create("MTRInteractionQueue", queueAttr);
+        _items = [NSMutableArray array];
+    }
+    return self;
+}
+- (void)enqueueInteractionItem:(MTRInteractionItem *)item {
+    item.queue = self;
+    [_items addObject:item];
+}
+- (void)invalidate {
+    while (_items.count) {
+        MTRInteractionItem *item = [_items objectAtIndex:0];
+        [_items removeObjectAtIndex:0];
+        item.cancelHandler();
+    }
+}
+@end
+
+@implementation MTRInteractionItem
+@synthesize interaction;
+@synthesize cancelHandler;
+
+// Called by Cluster object's interaction block;
+- (void)endInteraction {
+
+}
+- (void)retryInteraction {
+
+}
+
+// Called by the queue
+- (void)performInteraction {
+
+}
+- (void)cancel {
+    
+}
+@end

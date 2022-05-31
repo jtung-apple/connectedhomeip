@@ -304,6 +304,34 @@ extern NSString * const kCHIPArrayValueType;
 @property (nonatomic, readonly, strong, nullable) NSError * error;
 @end
 
+// How to queue a new interaction:
+//   - Create MTRInteractionItem object
+//   - Create the interaction as MTRInteractionBlock, that calls a either endInteraction or retryInteraction on the item object:
+//      - endInteraction for success / failure
+//      - retryInteraction for temporary failures
+//   - Set the interaction to the Item object
+//   - Call enqueueInteractionItem on the device's queue
+
+// A serial one-at-a-time queue for performing interactions
+@class MTRInteractionItem;
+@interface MTRInteractionQueue : NSObject
+- (void)enqueueInteractionItem:(MTRInteractionItem *)item;
+- (void)invalidate;
+
+// TODO: Add a "set concurrency width" method to allow for more than 1 interaction at a time
+@end
+
+typedef void (^MTRInteractionBlock)(NSUInteger retryCount);
+
+// An item in the interaction queue
+@interface MTRInteractionItem : NSObject
+@property (nonatomic, strong) MTRInteractionBlock interaction;
+@property (nonatomic, strong) dispatch_block_t cancelHandler;
+// Called by Cluster object's interaction block;
+- (void)endInteraction;
+- (void)retryInteraction;
+@end
+
 NS_ASSUME_NONNULL_END
 
 #endif /* CHIP_DEVICE_H */
