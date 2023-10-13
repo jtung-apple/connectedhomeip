@@ -17,7 +17,9 @@
 #import <Matter/MTRDefines.h>
 
 #if MTR_PER_CONTROLLER_STORAGE_ENABLED
+#import "MTRRemoteDeviceController_Internal.h"
 #import <Matter/MTRDeviceControllerParameters.h>
+#import <Matter/MTRRemoteDeviceControllerParameters.h>
 #else
 #import "MTRDeviceControllerParameters_Wrapper.h"
 #endif // MTR_PER_CONTROLLER_STORAGE_ENABLED
@@ -123,8 +125,23 @@ typedef BOOL (^SyncWorkQueueBlockWithBoolReturnValue)(void);
     MTRAttestationTrustStoreBridge * _attestationTrustStoreBridge;
 }
 
+- (nullable instancetype)initWithUniqueIdentifier:(NSUUID *)uniqueIdentifier
+{
+    if (self = [super init]) {
+        _uniqueIdentifier = uniqueIdentifier;
+    }
+    return self;
+}
+
 - (nullable instancetype)initWithParameters:(MTRDeviceControllerAbstractParameters *)parameters error:(NSError * __autoreleasing *)error
 {
+    if ([parameters isKindOfClass:[MTRRemoteDeviceControllerParameters class]]) {
+        MTRRemoteDeviceControllerParameters * xpcParameters = (MTRRemoteDeviceControllerParameters *) parameters;
+
+        MTRRemoteDeviceController * remoteController = [[MTRRemoteDeviceController alloc] initWithParameters:xpcParameters error:error];
+        return remoteController;
+    }
+
     if (![parameters isKindOfClass:MTRDeviceControllerParameters.class]) {
         MTR_LOG_ERROR("Unsupported type of MTRDeviceControllerAbstractParameters: %@", parameters);
 

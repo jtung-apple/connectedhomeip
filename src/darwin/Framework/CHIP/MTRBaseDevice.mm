@@ -2405,6 +2405,42 @@ MTREventPriority MTREventPriorityForValidPriorityLevel(chip::app::PriorityLevel 
     return [MTRClusterPath clusterPathWithEndpointID:_endpoint clusterID:_cluster];
 }
 
+static NSString * const sEndpointKey = @"endpointKey";
+static NSString * const sClusterKey = @"endpointKey";
+
++ (BOOL)supportsSecureCoding
+{
+    return YES;
+}
+
+- (nullable instancetype)initWithCoder:(NSCoder *)decoder
+{
+    self = [super init];
+    if (self == nil) {
+        return nil;
+    }
+
+    _endpoint = [decoder decodeObjectOfClass:[NSNumber class] forKey:sEndpointKey];
+    if (_endpoint && ![_endpoint isKindOfClass:[NSNumber class]]) {
+        MTR_LOG_ERROR("MTRClusterPath got %@ for endpoint, not NSNumber.", _endpoint);
+        return nil;
+    }
+
+    _cluster = [decoder decodeObjectOfClass:[NSNumber class] forKey:sClusterKey];
+    if (_cluster && ![_cluster isKindOfClass:[NSNumber class]]) {
+        MTR_LOG_ERROR("MTRClusterPath got %@ for cluster, not NSNumber.", _cluster);
+        return nil;
+    }
+
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [coder encodeObject:_endpoint forKey:sEndpointKey];
+    [coder encodeObject:_cluster forKey:sClusterKey];
+}
+
 @end
 
 @implementation MTRAttributePath
@@ -2462,6 +2498,35 @@ MTREventPriority MTREventPriorityForValidPriorityLevel(chip::app::PriorityLevel 
     return ConcreteAttributePath([self.endpoint unsignedShortValue], static_cast<ClusterId>([self.cluster unsignedLongValue]),
         static_cast<AttributeId>([self.attribute unsignedLongValue]));
 }
+
+static NSString * const sAttributeKey = @"attributeKey";
+
++ (BOOL)supportsSecureCoding
+{
+    return YES;
+}
+
+- (nullable instancetype)initWithCoder:(NSCoder *)decoder
+{
+    self = [super initWithCoder:decoder];
+    if (self == nil) {
+        return nil;
+    }
+
+    _attribute = [decoder decodeObjectOfClass:[NSNumber class] forKey:sAttributeKey];
+    if (_attribute && ![_attribute isKindOfClass:[NSNumber class]]) {
+        MTR_LOG_ERROR("MTRAttributePath got %@ for attribute, not NSNumber.", _attribute);
+        return nil;
+    }
+
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [coder encodeObject:_attribute forKey:sAttributeKey];
+}
+
 @end
 
 @implementation MTRAttributePath (Deprecated)
@@ -2525,6 +2590,35 @@ MTREventPriority MTREventPriorityForValidPriorityLevel(chip::app::PriorityLevel 
     return ConcreteEventPath([self.endpoint unsignedShortValue], static_cast<ClusterId>([self.cluster unsignedLongValue]),
         static_cast<EventId>([self.event unsignedLongValue]));
 }
+
+static NSString * const sEventKey = @"eventKey";
+
++ (BOOL)supportsSecureCoding
+{
+    return YES;
+}
+
+- (nullable instancetype)initWithCoder:(NSCoder *)decoder
+{
+    self = [super initWithCoder:decoder];
+    if (self == nil) {
+        return nil;
+    }
+
+    _event = [decoder decodeObjectOfClass:[NSNumber class] forKey:sEventKey];
+    if (_event && ![_event isKindOfClass:[NSNumber class]]) {
+        MTR_LOG_ERROR("MTRAttributePath got %@ for event, not NSNumber.", _event);
+        return nil;
+    }
+
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [coder encodeObject:_event forKey:sEventKey];
+}
+
 @end
 
 @implementation MTREventPath (Deprecated)
@@ -2580,6 +2674,35 @@ MTREventPriority MTREventPriorityForValidPriorityLevel(chip::app::PriorityLevel 
 {
     return [MTRCommandPath commandPathWithEndpointID:self.endpoint clusterID:self.cluster commandID:_command];
 }
+
+static NSString * const sCommandKey = @"commandKey";
+
++ (BOOL)supportsSecureCoding
+{
+    return YES;
+}
+
+- (nullable instancetype)initWithCoder:(NSCoder *)decoder
+{
+    self = [super initWithCoder:decoder];
+    if (self == nil) {
+        return nil;
+    }
+
+    _command = [decoder decodeObjectOfClass:[NSNumber class] forKey:sCommandKey];
+    if (_command && ![_command isKindOfClass:[NSNumber class]]) {
+        MTR_LOG_ERROR("MTRAttributePath got %@ for command, not NSNumber.", _command);
+        return nil;
+    }
+
+    return self;
+}
+
+- (void)encodeWithCoder:(NSCoder *)coder
+{
+    [coder encodeObject:_command forKey:sCommandKey];
+}
+
 @end
 
 @implementation MTRCommandPath (Deprecated)

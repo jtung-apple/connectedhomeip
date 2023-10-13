@@ -38,8 +38,6 @@
                BlueprintName = "MatterTests"
                ReferencedContainer = "container:Matter.xcodeproj">
             </BuildableReference>
-            <SkippedTests>
-            </SkippedTests>
          </TestableReference>
       </Testables>
    </TestAction>

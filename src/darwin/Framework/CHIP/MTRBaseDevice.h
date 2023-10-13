@@ -550,7 +550,7 @@ MTR_AVAILABLE(ios(17.0), macos(14.0), watchos(10.0), tvos(17.0))
  * wildcards).
  */
 MTR_AVAILABLE(ios(16.4), macos(13.3), watchos(9.4), tvos(16.4))
-@interface MTRClusterPath : NSObject <NSCopying>
+@interface MTRClusterPath : NSObject <NSCopying, NSSecureCoding>
 @property (nonatomic, readonly, copy) NSNumber * endpoint;
 @property (nonatomic, readonly, copy) NSNumber * cluster;
 
@@ -564,7 +564,7 @@ MTR_AVAILABLE(ios(16.4), macos(13.3), watchos(9.4), tvos(16.4))
  * A path indicating a specific attribute on a device (i.e. without any
  * wildcards).
  */
-@interface MTRAttributePath : MTRClusterPath
+@interface MTRAttributePath : MTRClusterPath <NSSecureCoding>
 @property (nonatomic, readonly, copy) NSNumber * attribute;
 
 + (MTRAttributePath *)attributePathWithEndpointID:(NSNumber *)endpointID
@@ -578,7 +578,7 @@ MTR_AVAILABLE(ios(16.4), macos(13.3), watchos(9.4), tvos(16.4))
  * (i.e. without any wildcards).  There can be multiple instances of actual
  * events for a given event path.
  */
-@interface MTREventPath : MTRClusterPath
+@interface MTREventPath : MTRClusterPath <NSSecureCoding>
 @property (nonatomic, readonly, copy) NSNumber * event;
 
 + (MTREventPath *)eventPathWithEndpointID:(NSNumber *)endpointID
@@ -590,7 +590,7 @@ MTR_AVAILABLE(ios(16.4), macos(13.3), watchos(9.4), tvos(16.4))
  * A path indicating a specific command on a device (i.e. without any
  * wildcards).
  */
-@interface MTRCommandPath : MTRClusterPath
+@interface MTRCommandPath : MTRClusterPath <NSSecureCoding>
 @property (nonatomic, readonly, copy) NSNumber * command;
 
 + (MTRCommandPath *)commandPathWithEndpointID:(NSNumber *)endpointID

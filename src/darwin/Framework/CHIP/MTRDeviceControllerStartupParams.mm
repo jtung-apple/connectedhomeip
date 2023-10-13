@@ -21,6 +21,7 @@
 #import "MTRDeviceController_Internal.h"
 #import "MTRLogging_Internal.h"
 #import "MTRP256KeypairBridge.h"
+#import "MTRRemoteDeviceControllerParameters.h"
 #import "NSDataSpanConversion.h"
 
 #if MTR_PER_CONTROLLER_STORAGE_ENABLED
@@ -306,6 +307,17 @@ static NSData * _Nullable MatterCertToX509Data(const ByteSpan & cert)
     _otaProviderDelegateQueue = queue;
 }
 
+@end
+
+@implementation MTRRemoteDeviceControllerParameters
+- (instancetype)initWithXPCServiceName:(NSString *)xpcServiceName uniqueIdentifier:(NSUUID *)uniqueIdentifier
+{
+    if (self = [super _initInternal]) {
+        _xpcServiceName = xpcServiceName;
+        _uniqueIdentifier = uniqueIdentifier;
+    }
+    return self;
+}
 @end
 
 @implementation MTRDeviceControllerExternalCertificateParameters

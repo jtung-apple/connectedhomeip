@@ -22,6 +22,7 @@
 #import <Matter/MTRDeviceController.h>
 #if MTR_PER_CONTROLLER_STORAGE_ENABLED
 #import <Matter/MTRDeviceControllerParameters.h>
+#import <Matter/MTRRemoteDeviceControllerParameters.h>
 #else
 #import "MTRDeviceControllerParameters_Wrapper.h"
 #endif // MTR_PER_CONTROLLER_STORAGE_ENABLED
@@ -89,6 +90,10 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, strong, readonly, nullable) id<MTROTAProviderDelegate> otaProviderDelegate;
 @property (nonatomic, strong, readonly, nullable) dispatch_queue_t otaProviderDelegateQueue;
 
+@end
+
+@interface MTRRemoteDeviceControllerParameters ()
+@property (nonatomic, strong, readonly) NSString * xpcServiceName;
 @end
 
 MTR_HIDDEN

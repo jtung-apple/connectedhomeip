@@ -31,6 +31,8 @@
 #import "MTRError_Internal.h"
 #import "MTREventTLVValueDecoder_Internal.h"
 #import "MTRLogging_Internal.h"
+#import "MTRRemoteDevice.h"
+#import "MTRRemoteDeviceController.h"
 #import "zap-generated/MTRCommandPayloads_Internal.h"
 
 #include "lib/core/CHIPError.h"
@@ -48,13 +50,6 @@ typedef void (^MTRDeviceAttributeReportHandler)(NSArray * _Nonnull);
 // Consider moving utility classes to their own file
 #pragma mark - Utility Classes
 // This class is for storing weak references in a container
-MTR_HIDDEN
-@interface MTRWeakReference<ObjectType> : NSObject
-+ (instancetype)weakReferenceWithObject:(ObjectType)object;
-- (instancetype)initWithObject:(ObjectType)object;
-- (ObjectType)strongObject; // returns strong object or NULL
-@end
-
 @interface MTRWeakReference () {
 @private
     __weak id _object;
@@ -142,8 +137,6 @@ typedef NS_ENUM(NSUInteger, MTRDeviceWorkItemDuplicateTypeID) {
 @interface MTRDevice ()
 @property (nonatomic, readonly) os_unfair_lock lock; // protects the caches and device state
 @property (nonatomic) chip::FabricIndex fabricIndex;
-@property (nonatomic) MTRWeakReference<id<MTRDeviceDelegate>> * weakDelegate;
-@property (nonatomic) dispatch_queue_t delegateQueue;
 @property (nonatomic) NSMutableArray<NSDictionary<NSString *, id> *> * unreportedEvents;
 @property (nonatomic) BOOL receivingReport;
 @property (nonatomic) BOOL receivingPrimingReport;
@@ -251,8 +244,6 @@ typedef NS_ENUM(NSUInteger, MTRDeviceWorkItemDuplicateTypeID) {
 
 - (void)setDelegate:(id<MTRDeviceDelegate>)delegate queue:(dispatch_queue_t)queue
 {
-    MTR_LOG_INFO("%@ setDelegate %@", self, delegate);
-
     BOOL setUpSubscription = YES;
 
     // For unit testing only
@@ -262,6 +253,13 @@ typedef NS_ENUM(NSUInteger, MTRDeviceWorkItemDuplicateTypeID) {
         setUpSubscription = [testDelegate unitTestShouldSetUpSubscriptionForDevice:self];
     }
 #endif
+
+    [self setDelegate:delegate queue:queue setUpSubscription:setUpSubscription];
+}
+
+- (void)setDelegate:(id<MTRDeviceDelegate>)delegate queue:(dispatch_queue_t)queue setUpSubscription:(BOOL)setUpSubscription
+{
+    MTR_LOG_INFO("%@ setDelegate %@", self, delegate);
 
     os_unfair_lock_lock(&self->_lock);
 
@@ -423,7 +421,7 @@ typedef NS_ENUM(NSUInteger, MTRDeviceWorkItemDuplicateTypeID) {
     }
 
     MTR_LOG_DEFAULT("%@ scheduling to reattempt subscription in %u seconds", self, _lastSubscriptionAttemptWait);
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t) (_lastSubscriptionAttemptWait * NSEC_PER_SEC)), self.queue, ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(_lastSubscriptionAttemptWait * NSEC_PER_SEC)), self.queue, ^{
         os_unfair_lock_lock(&self->_lock);
         [self _reattemptSubscriptionNowIfNeeded];
         os_unfair_lock_unlock(&self->_lock);
@@ -1422,7 +1420,7 @@ static BOOL AttributeHasChangesOmittedQuality(MTRAttributePath * attributePath)
             waitTime = MTR_DEVICE_EXPIRATION_CHECK_TIMER_MINIMUM_WAIT_TIME;
         }
         MTRWeakReference<MTRDevice *> * weakSelf = [MTRWeakReference weakReferenceWithObject:self];
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t) (waitTime * NSEC_PER_SEC)), self.queue, ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(waitTime * NSEC_PER_SEC)), self.queue, ^{
             MTRDevice * strongSelf = weakSelf.strongObject;
             [strongSelf _performScheduledExpirationCheck];
         });
@@ -1726,6 +1724,21 @@ static BOOL AttributeHasChangesOmittedQuality(MTRAttributePath * attributePath)
             [self _reportAttributes:@[ @{ MTRAttributePathKey : attributePath } ]];
         }
     }
+}
+
+- (NSArray<NSDictionary *> *)getAllCurrentAttributes
+{
+    os_unfair_lock_lock(&self->_lock);
+
+    NSMutableArray * attributesToReport = [NSMutableArray array];
+    for (MTRAttributePath * attributePath in _readCache) {
+        NSDictionary * dataValue = _readCache[attributePath];
+        [attributesToReport addObject:@{ MTRAttributePathKey : attributePath, MTRDataKey : dataValue }];
+    }
+    MTR_LOG_INFO("%@ getAllCurrentAttributes reporting %lu values", self, attributesToReport.count);
+
+    os_unfair_lock_unlock(&self->_lock);
+    return attributesToReport;
 }
 
 - (MTRBaseDevice *)newBaseDevice

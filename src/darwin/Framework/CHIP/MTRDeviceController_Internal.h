@@ -115,6 +115,8 @@ NS_ASSUME_NONNULL_BEGIN
        otaProviderDelegateQueue:(dispatch_queue_t _Nullable)otaProviderDelegateQueue
                uniqueIdentifier:(NSUUID *)uniqueIdentifier;
 
+- (nullable instancetype)initWithUniqueIdentifier:(NSUUID *)uniqueIdentifier;
+
 /**
  * Check whether this controller is running on the given fabric, as represented
  * by the provided FabricTable and fabric index.  The provided fabric table may

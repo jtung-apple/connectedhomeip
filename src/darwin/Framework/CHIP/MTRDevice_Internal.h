@@ -18,6 +18,7 @@
 #import <Foundation/Foundation.h>
 #import <Matter/MTRBaseDevice.h>
 #import <Matter/MTRDevice.h>
+#import <os/lock.h>
 
 #import "MTRAsyncWorkQueue.h"
 
@@ -28,6 +29,13 @@ NS_ASSUME_NONNULL_BEGIN
 @class MTRAsyncWorkQueue;
 
 typedef void (^MTRDevicePerformAsyncBlock)(MTRBaseDevice * baseDevice);
+
+MTR_HIDDEN
+@interface MTRWeakReference<ObjectType> : NSObject
++ (instancetype)weakReferenceWithObject:(ObjectType)object;
+- (instancetype)initWithObject:(ObjectType)object;
+- (ObjectType)strongObject; // returns strong object or NULL
+@end
 
 @interface MTRDevice ()
 - (instancetype)initWithNodeID:(NSNumber *)nodeID controller:(MTRDeviceController *)controller;
@@ -64,10 +72,20 @@ typedef void (^MTRDevicePerformAsyncBlock)(MTRBaseDevice * baseDevice);
                                     queue:(dispatch_queue_t)queue
                                completion:(void (^)(id _Nullable response, NSError * _Nullable error))completion;
 
+/**
+ * Returns all current known attributes
+ */
+- (NSArray<NSDictionary *> *)getAllCurrentAttributes;
+
 // Queue used for various internal bookkeeping work.
 @property (nonatomic) dispatch_queue_t queue;
 @property (nonatomic, readonly) MTRAsyncWorkQueue<MTRDevice *> * asyncWorkQueue;
+@property (nonatomic) MTRWeakReference<id<MTRDeviceDelegate>> * weakDelegate;
+@property (nonatomic) dispatch_queue_t delegateQueue;
 
+- (void)setDelegate:(id<MTRDeviceDelegate>)delegate queue:(dispatch_queue_t)queue setUpSubscription:(BOOL)setUpSubscription;
+
+@property (nonatomic, readwrite) MTRDeviceState state;
 @end
 
 #pragma mark - Utility for clamping numbers
